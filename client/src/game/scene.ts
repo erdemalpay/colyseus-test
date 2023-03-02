@@ -31,7 +31,7 @@ export class GameScene extends Scene {
     this.room.onStateChange((state) => {
       for (const [sessionId, player] of state.players.entries()) {
         if (sessionId === this.currentPlayer?.sessionId) {
-          this.currentPlayer.moveTo(player.x, player.y);
+          this.currentPlayer?.moveTo(player.x, player.y);
           continue;
         }
 
