@@ -27,6 +27,7 @@ export class GameScene extends Scene {
   room: Room<RoomState> | null = null;
   remotePlayers = new Map<string, Player>();
   userId = getUserId();
+  measureLag = false;
 
   constructor() {
     super("gameScene");
@@ -41,6 +42,8 @@ export class GameScene extends Scene {
     this.input.on(Input.Events.POINTER_DOWN, (pointer: Input.Pointer) => {
       const { worldX, worldY } = pointer;
       this.room?.send("moveTo", { x: worldX, y: worldY });
+      this.measureLag = true;
+      console.time("lag");
       this.addTarget(worldX, worldY);
     });
 
@@ -57,6 +60,10 @@ export class GameScene extends Scene {
     this.room.onStateChange((state) => {
       for (const [userId, player] of state.players.entries()) {
         if (userId === this.userId) {
+          if (this.measureLag) {
+            console.timeEnd("lag");
+            this.measureLag = false;
+          }
           this.currentPlayer?.moveTo(player.x, player.y);
           continue;
         }
