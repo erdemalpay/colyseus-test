@@ -1,5 +1,5 @@
 import { Room } from "colyseus.js";
-import { Scene, Input } from "phaser";
+import { Scene, Input, GameObjects } from "phaser";
 import { RoomState } from "../../../server/src/room/room.state";
 import { Position } from "./game.types";
 import { Player } from "./player";
@@ -23,6 +23,7 @@ const getUserId = () => {
 
 export class GameScene extends Scene {
   currentPlayer: Player | null = null;
+  target: GameObjects.Arc | null = null;
   room: Room<RoomState> | null = null;
   remotePlayers = new Map<string, Player>();
   userId = getUserId();
@@ -38,7 +39,9 @@ export class GameScene extends Scene {
     log.visible = false;
 
     this.input.on(Input.Events.POINTER_DOWN, (pointer: Input.Pointer) => {
-      this.room?.send("moveTo", { x: pointer.worldX, y: pointer.worldY });
+      const { worldX, worldY } = pointer;
+      this.room?.send("moveTo", { x: worldX, y: worldY });
+      this.addTarget(worldX, worldY);
     });
 
     this.room.onMessage("initialPosition", (position: Position) => {
@@ -87,13 +90,36 @@ export class GameScene extends Scene {
     );
   }
 
-  createCurrentPlayer(position: Position) {
-    this.currentPlayer = new Player(this, position.x, position.y);
+  addTarget(x: number, y: number) {
+    if (this.target) {
+      this.target.x = x;
+      this.target.y = y;
+    } else {
+      this.target = this.add.circle(x, y, 5, 0x999999fff, 0.8);
+    }
   }
 
-  update() {}
-}
+  checkTargetOverlap() {
+    if (!this.target) return;
 
-// function lerp(start: number, end: number, amt: number) {
-//   return (1 - amt) * start + amt * end;
-// }
+    const [overlapped] = this.physics.overlapCirc(
+      this.target.x,
+      this.target.y,
+      this.target.radius
+    );
+
+    if (!!overlapped) {
+      this.target.destroy();
+      this.target = null;
+    }
+  }
+
+  createCurrentPlayer(position: Position) {
+    this.currentPlayer = new Player(this, position.x, position.y);
+    this.physics.world.enableBody(this.currentPlayer.getShape());
+  }
+
+  update() {
+    this.checkTargetOverlap();
+  }
+}

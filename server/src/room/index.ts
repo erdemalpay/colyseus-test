@@ -25,7 +25,7 @@ export class MyMap extends Room<RoomState> {
   }
 
   onJoin(client: Client, userId: string) {
-    const position = this.positionHandler.getRandomPosition();
+    const position = PositionHandler.getRandomPosition();
     this.state.players.set(userId, new Player(position));
     client.userData = { userId };
 

@@ -5,16 +5,21 @@ export interface Position {
   y: number;
 }
 
+const mapSize = { x: 800, y: 600 };
+
 export class PositionHandler {
   private playerSpeed = 10;
-  private mapSize = { x: 800, y: 600 };
   private positionsToGo = new Map<string, Position>();
 
-  getRandomPosition(): Position {
+  static getRandomPosition(): Position {
     return {
-      x: Math.round(Math.random() * this.mapSize.x),
-      y: Math.round(Math.random() * this.mapSize.y),
+      x: Math.round(Math.random() * mapSize.x),
+      y: Math.round(Math.random() * mapSize.y),
     };
+  }
+
+  static lerp(start: number, end: number, amt: number): number {
+    return (1 - amt) * start + amt * end;
   }
 
   registerPosition(userId: string, position: Position) {
