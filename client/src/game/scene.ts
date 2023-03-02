@@ -1,68 +1,78 @@
 import { Room } from "colyseus.js";
-import { Scene } from "phaser";
+import { Scene, Input } from "phaser";
 import { RoomState } from "../../../server/src/room/room.state";
-import { Position, Velocity } from "./game.types";
-import { Keyboard, KeyboardAction } from "./keyboard";
+import { Position } from "./game.types";
 import { Player } from "./player";
 import { RoomClient } from "./room";
+import { v4 as uuidv4 } from "uuid";
 
 const roomClient = new RoomClient();
 
-const startingPosition: Position = {
-  x: 200,
-  y: 200,
+const getUserId = () => {
+  let userId = window.localStorage.getItem("userId");
+
+  if (userId) {
+    return userId;
+  }
+
+  userId = uuidv4();
+  window.localStorage.setItem("userId", userId);
+
+  return userId;
 };
 
 export class GameScene extends Scene {
   currentPlayer: Player | null = null;
-  keyboard: Keyboard | null = null;
   room: Room<RoomState> | null = null;
   remotePlayers = new Map<string, Player>();
+  userId = getUserId();
+
   constructor() {
     super("gameScene");
   }
 
   async create() {
     const log = this.add.text(10, 10, "Creating map...");
-    this.room = await roomClient.join(startingPosition);
-    this.createMap(this.room.sessionId);
+    this.room = await roomClient.join(this.userId);
+    this.createMap();
     log.visible = false;
 
+    this.input.on(Input.Events.POINTER_DOWN, (pointer: Input.Pointer) => {
+      this.room?.send("moveTo", { x: pointer.worldX, y: pointer.worldY });
+    });
+
+    this.room.onMessage("initialPosition", (position: Position) => {
+      this.createCurrentPlayer(position);
+    });
+
+    this.room.onMessage("playerLeave", (userId: string) => {
+      const player = this.remotePlayers.get(userId);
+      player?.destroy();
+      this.remotePlayers.delete(userId);
+    });
+
     this.room.onStateChange((state) => {
-      for (const [sessionId, player] of state.players.entries()) {
-        if (sessionId === this.currentPlayer?.sessionId) {
+      for (const [userId, player] of state.players.entries()) {
+        if (userId === this.userId) {
           this.currentPlayer?.moveTo(player.x, player.y);
           continue;
         }
 
-        const remotePlayer = this.remotePlayers.get(sessionId);
+        const remotePlayer = this.remotePlayers.get(userId);
 
         if (remotePlayer) {
           remotePlayer.moveTo(player.x, player.y);
         } else {
           this.remotePlayers.set(
-            sessionId,
-            new Player(this, sessionId, player.x, player.y, 0.5)
+            userId,
+            new Player(this, player.x, player.y, 0.5)
           );
         }
       }
     });
-
-    this.room.onMessage("playerLeave", (sessionId: string) => {
-      const player = this.remotePlayers.get(sessionId);
-      player?.destroy();
-      this.remotePlayers.delete(sessionId);
-    });
   }
 
-  createMap(sessionId: string) {
-    this.currentPlayer = new Player(
-      this,
-      sessionId,
-      startingPosition.x,
-      startingPosition.y
-    );
-    this.keyboard = new Keyboard(this);
+  createMap() {
     this.add.grid(
       0,
       0,
@@ -77,36 +87,13 @@ export class GameScene extends Scene {
     );
   }
 
-  update() {
-    this.updateCurrentPlayer();
+  createCurrentPlayer(position: Position) {
+    this.currentPlayer = new Player(this, position.x, position.y);
   }
 
-  updateCurrentPlayer() {
-    if (!this.currentPlayer || !this.keyboard) return;
-
-    const actions = this.keyboard.getActiveActions();
-    const velocity: Velocity = {
-      x: actions.includes(KeyboardAction.Left)
-        ? -1
-        : actions.includes(KeyboardAction.Right)
-        ? 1
-        : 0,
-      y: actions.includes(KeyboardAction.Up)
-        ? -1
-        : actions.includes(KeyboardAction.Down)
-        ? 1
-        : 0,
-    };
-
-    this.room?.send("move", velocity);
-    // Interpolation?
-    this.currentPlayer.move({
-      x: lerp(0, velocity.x, 0.1),
-      y: lerp(0, velocity.y, 0.1),
-    });
-  }
+  update() {}
 }
 
-function lerp(start: number, end: number, amt: number) {
-  return (1 - amt) * start + amt * end;
-}
+// function lerp(start: number, end: number, amt: number) {
+//   return (1 - amt) * start + amt * end;
+// }

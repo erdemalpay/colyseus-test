@@ -1,40 +1,43 @@
+import { PositionHandler, type Position } from "../player/position.handler";
 import { Room, Client } from "colyseus";
-import { Player, RoomState } from "./room.state";
-
-interface Position {
-  x: number;
-  y: number;
-}
+import { Player } from "../player/player.schema";
+import { RoomState } from "./room.state";
 
 export class MyMap extends Room<RoomState> {
-  private playerSpeed = 3;
+  private positionHandler = new PositionHandler();
 
   onCreate() {
     this.setState(new RoomState());
+    this.clock.start();
 
-    this.onMessage("move", (client, velocity: { x: number; y: number }) => {
-      const player = this.state.players.get(client.sessionId);
+    this.clock.setInterval(() => {
+      this.positionHandler.onTick(this.state);
+    }, 50);
+
+    this.onMessage("moveTo", (client, position: Position) => {
+      const userId = client.userData.userId;
+      const player = this.state.players.get(userId);
 
       if (!player) return; // TODO: Is it possible?
 
-      player.x += velocity.x ? velocity.x * this.playerSpeed : 0;
-      player.y += velocity.y ? velocity.y * this.playerSpeed : 0;
-
-      this.state.players.set(client.sessionId, player);
+      this.positionHandler.registerPosition(userId, position);
     });
   }
 
-  onJoin(client: Client, options: Position) {
-    this.state.players.set(
-      client.sessionId,
-      new Player({ x: options.x, y: options.y })
-    );
+  onJoin(client: Client, userId: string) {
+    const position = this.positionHandler.getRandomPosition();
+    this.state.players.set(userId, new Player(position));
+    client.userData = { userId };
+
+    client.send("initialPosition", position);
   }
 
   onLeave(client: Client) {
-    if (this.state.players.has(client.sessionId)) {
-      this.state.players.delete(client.sessionId);
-      this.broadcast("playerLeave", client.sessionId);
+    const userId = client.userData.userId;
+
+    if (this.state.players.has(userId)) {
+      this.state.players.delete(userId);
+      this.broadcast("playerLeave", userId);
     }
   }
 }

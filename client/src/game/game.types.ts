@@ -1,13 +1,4 @@
-import { RoomState } from "../../../server/src/room/room.state";
+import { RoomState, Position } from "../../../server/src/types";
 
 export { RoomState };
-
-export interface Position {
-  x: number;
-  y: number;
-}
-
-export interface Velocity {
-  x: number;
-  y: number;
-}
+export type { Position };
