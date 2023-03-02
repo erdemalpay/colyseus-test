@@ -8,7 +8,7 @@ export interface Position {
 const mapSize = { x: 800, y: 600 };
 
 export class PositionHandler {
-  private playerSpeed = 10;
+  private playerSpeed = 15;
   private positionsToGo = new Map<string, Position>();
 
   static getRandomPosition(): Position {

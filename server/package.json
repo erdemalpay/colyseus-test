@@ -5,6 +5,7 @@
     "start": "ts-node src/server.ts",
     "dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server.ts ",
     "start:prod": "NODE_ENV=production node dist/server.js",
+    "load-test": "npx colyseus-loadtest src/load-test.ts --room map --endpoint ws://localhost:5678",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
