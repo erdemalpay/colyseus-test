@@ -40,10 +40,14 @@ export class GameScene extends Scene {
     log.visible = false;
 
     this.input.on(Input.Events.POINTER_DOWN, (pointer: Input.Pointer) => {
+      if (!this.currentPlayer) return;
+
       const { worldX, worldY } = pointer;
       this.room?.send("moveTo", { x: worldX, y: worldY });
-      this.measureLag = true;
-      console.time("lag");
+      if (!this.currentPlayer.moving) {
+        this.measureLag = true;
+        console.time("lag");
+      }
       this.addTarget(worldX, worldY);
     });
 
@@ -64,14 +68,14 @@ export class GameScene extends Scene {
             console.timeEnd("lag");
             this.measureLag = false;
           }
-          this.currentPlayer?.moveTo(player.x, player.y);
+          this.currentPlayer?.moveTo(player.x, player.y, player.moving);
           continue;
         }
 
         const remotePlayer = this.remotePlayers.get(userId);
 
         if (remotePlayer) {
-          remotePlayer.moveTo(player.x, player.y);
+          remotePlayer.moveTo(player.x, player.y, player.moving);
         } else {
           this.remotePlayers.set(
             userId,

@@ -59,6 +59,7 @@ export class PositionHandler {
       if (diffToTarget < this.playerSpeed) {
         player.x = playerPositionToGo.x;
         player.y = playerPositionToGo.y;
+        player.moving = false;
       } else {
         const stepX = Math.sin(angleToTarget) * this.playerSpeed;
         const stepY = Math.cos(angleToTarget) * this.playerSpeed;
@@ -68,6 +69,7 @@ export class PositionHandler {
 
         player.x = newX;
         player.y = newY;
+        player.moving = true;
       }
 
       state.players.set(userId, player);
